@@ -20,7 +20,10 @@
 
 *-------------------------------------------------------------------------------	
 * Part I
-*------------------------------------------------------------------------------- 		
+*------------------------------------------------------------------------------- 
+
+  
+		
    *Q1:At what level is each dataset uniquely identified (i.e., what does each row represent, and which variables are unique identifiers)? 
     
 	*Dataset demoraphics
@@ -36,6 +39,18 @@
 	* rows with unique indentifier
 	
 	isid wave hhid hhmid
+	
+	*Cleaning variables 
+	
+	replace age=. if age<0
+	
+	recode gender 5=2
+	
+	replace religion=. if religion==95
+	
+	*Save dataset 
+	
+	save "demographics_clean.dta", replace
     
 	*what ecah row represent: Each row in the dataset represents an individual (hhmid) within a household (hhid) in a specific survey wave (wave). The dataset is structured at the individual level, where each person is observed across different waves, and multiple individuals can belong to the same household.
 	
@@ -78,7 +93,7 @@
 	 
 	 *Load data set 
 	
-	use "demographics.dta", replace // 34,427 obs and 19 variables 
+	use "demographics_clean", replace // 34,427 obs and 19 variables 
 	 
     gen hh_size = .
 	
@@ -165,32 +180,40 @@ label define kessler_lbl 1 "No significant depression" 2 "Mild depression" ///
                          3 "Moderate depression" 4 "Severe depression"
 label values kessler_categories kessler_lbl
 
+   *Save dataset 
+   
+   save "depressionII.dta", replace
+
    
    *Q7: At this point you have created three datasets: demographics, assets, and mental health. Please combine all three of these datasets to create a single dataset that you will use for data exploration and analysis. The unit of observation in this dataset should be an individual in a given survey round. (There should be at most two observations per individual, one for Wave 1 and another for Wave 2).
    
    *Check structure of the datasets 
    
-   use demographics.dta, clear
+   use demographics_clean.dta, clear
    describe hhid hhmid wave
    list hhid hhmid wave if _n <= 10, sepby(hhid)
   
    
-   save demographics.dta, replace
+   save demographics_clean.dta, replace
    
-   use assets.dta, clear
+   use household_wave_assets.dta, clear
    describe hhid wave
+   destring hhid, replace
+  save household_wave_asset.dta, replace
 
-  use "depression.dta", replace
+  use "depressionII.dta", replace
   
-  save depression.dta, replace
+  save depressionII.dta, replace
   
   
   *Merge 
   
-   use demographics.dta, clear
+   use demographics_clean.dta, clear
 
    
-   merge m:1 hhid hhmid wave using depression.dta //   Matched                            13,842
+   merge 1:1 hhid hhmid wave using depressionII.dta //   Matched                            13,842
+   
+   
    
    *Check merge results
    
@@ -198,36 +221,185 @@ label values kessler_categories kessler_lbl
    drop _merge
    save merged_data.dta, replace
    
+   
+   
+   *Merge with depression data 
+   
+   use merged_data.dta, replace
+   
+    merge m:1 hhid wave using household_wave_assets.dta //   
+   
+   
+   *Check merge results
+   
+   keep if _merge == 3
+   drop _merge
+   save merged_data.dta, replace
+   
+  
+   
 *-------------------------------------------------------------------------------	
 * Part II: Exploratory Analysis
 *-------------------------------------------------------------------------------	
   
+  *Q1: Explore the relationship between depression and:
   
+  *1. Household wealth, proxied by total asset value.
+
+   keep if wave == 1
    
+   summarize kessler_score
+   
+   *Histogram Kessler score
+   
+   histogram kessler_score, bin(20) normal title("Distribution of Kessler Score - Wave 1")
+
   
+   *Scatterplot: Depression vs. Household Wealth
+   
+  scatter kessler_score total_value, ///
+    title("Depression vs. Household Wealth") ///
+    ytitle("Kessler Score (Depression)") ///
+    xtitle("Total Asset Value") ///
+    mcolor(blue)
+	
+	*Regression OLS
+	
+	asdoc reg kessler_score total_value, robust replace save(Kessler_Regression.doc)
+	
+	*Correlation table
+	
+	asdoc cor kessler_score total_value, replace save(Correlation_Table.doc)
+	
+	
+	*2. A household or demographic characteristic that seems interesting to you.
+	
+	*Age 
+	
+	preserve
+	
+	drop if age<0
+	
+	collapse (mean) kessler_score, by(age)
+
+twoway (line kessler_score age, lcolor(blue) lwidth(medthick)), ///
+       title("Average Depression Score Over Time") ///
+       xtitle("Age") ytitle("Mean Kessler Score") ///
+       xlabel(, grid)
+	   
+	restore
+	
+	
+    *Gender
+	
+	graph box kessler_score, over(gender, label(angle(45))) ///
+    title("Depression Levels by Gender") ///
+    ytitle("Kessler Score") 
+	
+	*Religion 
+	
+	preserve 
+	
+	drop if religion==95
+	
+	graph bar (mean) kessler_score, over(religion, sort(1) label(angle(45))) ///
+    title("Average Depression Score by Religion") ///
+    ytitle("Mean Kessler Score") 
+
+	restore
+	
+	*Marital Status
+	
+	graph bar (mean) kessler_score, over(maritalstatus, sort(1) label(angle(45))) ///
+    title("Average Depression Score by Marital Status") ///
+    ytitle("Mean Kessler Score") 
+	
+	*Regressions 
+	
+	asdoc reg kessler_score total_value age gender, robust replace save(Kessler_FullModel.doc)
+	
+	asdoc reg kessler_score total_value age gender  maritalstatus, robust replace save(Kessler_FullModel_marital_status.doc)
+	
+	
+*Q2: Were the GT sessions effective at reducing depression?
+
+   use merged_data.dta, replace
+   
+   keep if wave == 2
+   
+   *Simple Regression: Effect of GT Sessions on Depression
+   
+   asdoc reg kessler_score treat_hh, robust replace ///
+title(Effect of GT Sessions on Depression) ///
+save(gt_effect.doc)
+   
+   *Adjusted Regression: Controlling for Demographics & Wealth
+   
+   asdoc reg kessler_score treat_hh age gender total_value, robust append ///
+title(Adjusted Effect of GT Sessions on Depression) ///
+save(gt_effect_controls.doc)
+
+
+  *Mean Comparison (T-Test)
   
-  
+  asdoc ttest kessler_score, by(treat_hh) ///
+title(T-Test: Depression in GT vs. Control) ///
+save(gt_effect_Ttest.doc) append
+
+
+   *Boxplot
+   
+   graph box kessler_score, over(treat_hh, label(angle(45))) ///
+title("Effect of GT Sessions on Depression") ///
+ytitle("Kessler Depression Score") 
+graph export gt_effect.png, replace
+
+  *Q3: Did the effect of GT sessions on depression differ by gender? Perform a linear regression of the Kessler Score on:
  
-
-*-------------------------------------------------------------------------------	
-* Select varaibles
-*-------------------------------------------------------------------------------  
-
-
-   
-   
- *-------------------------------------------------------------------------------	
-* Order Data set
-*-------------------------------------------------------------------------------	
-   
-   order day month year id_entrevista municipality age gender income
   
+   *Create interact term 
+   
+   gen treat_x_woman = treat_hh * gender
+   
+   *Regression 
+   
+   asdoc reg kessler_score gender treat_hh treat_x_woman, robust replace ///
+title(Effect of GT Sessions on Depression by Gender) ///
+save(gt_gender_effect.doc)
+
+  *Boxplot
+  
+   graph box kessler_score, over(treat_hh) over(gender) ///
+title("Depression by Treatment & Gender") ///
+ytitle("Kessler Depression Score") 
+graph export gt_gender_effect.png, replace
+ 
+ 
+  *Only women 
+  
+   preserve 
+   
+   keep if gender==2
+   
+    asdoc reg kessler_score gender treat_hh treat_x_woman, robust replace ///
+title(Effect of GT Sessions on Depression by Gender) ///
+save(gt_gender_effect_women.doc)
+
+   *Boxplot
+  
+   graph box kessler_score, over(treat_hh) over(gender) ///
+title("Depression by Treatment & Gender") ///
+ytitle("Kessler Depression Score") 
+graph export gt_gender_effect.png, replace
+
+  restore
+
 
 *-------------------------------------------------------------------------------	
 * Save data set
 *-------------------------------------------------------------------------------	
    
-   save "", replace
+   save "final_dataset", replace
    
    
    
