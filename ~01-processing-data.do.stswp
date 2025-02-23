@@ -108,28 +108,105 @@
    gen total_value = quantity * currentvalue_imputed
    
    sum total_value
+   
+   *Q5: Produce a dataset at the household-wave level (for each household, there should be at most two observations, one for each wave) which contains the following variables:
+    
+	gen total_value_animals = total_value if Asset_Type == 1
+	
+    gen total_value_tools = total_value if Asset_Type == 2
+	
+    gen total_value_durable = total_value if Asset_Type == 3
+   
+   collapse (sum) total_value_animals total_value_tools total_value_durable total_value,by(hhid wave)
+   
+   *Save dataset 
+   
+   save household_wave_assets.dta, replace
+   
+   *Q6:Using this reference, construct the kessler score (name it kessler score) and a categorical variable named kessler categories with 4 categories: no significant depression, mild depression, moderate depression, and severe depression.
+   
+   *Load data set 
+   
+   use "depression.dta", replace // 13,842 obs and 13 variables 
+	
+  *Generate Kessler-10 score
   
+   gen kessler_score = .
+   
+   egen kessler_sum = rowtotal(tired nervous sonervous hopeless restless sorestless depressed everythingeffort nothingcheerup worthless), missing
+
+  *Count missing values
+  
+  egen missing_count = rowmiss(tired nervous sonervous hopeless restless sorestless depressed everythingeffort nothingcheerup worthless)
+
+  *If all values are present, use row sum
+  
+  replace kessler_score = kessler_sum if missing_count == 0
+
+  *If at most 1 value is missing, impute using the mean of available responses
+
+   egen kessler_mean = rowmean(tired nervous sonervous hopeless restless sorestless depressed everythingeffort nothingcheerup worthless)
+   
+   replace kessler_score = round(kessler_mean * 10) if missing_count == 1
+
+  *If more than 1 value is missing, keep it as missing
+
+   replace kessler_score = . if missing_count > 1
+  
+  *Create Categories 
+  
+  gen kessler_categories = .
+  replace kessler_categories = 1 if kessler_score >= 10 & kessler_score <= 19
+  replace kessler_categories = 2 if kessler_score >= 20 & kessler_score <= 24
+  replace kessler_categories = 3 if kessler_score >= 25 & kessler_score <= 29
+  replace kessler_categories = 4 if kessler_score >= 30 & kessler_score <= 50
+
+label define kessler_lbl 1 "No significant depression" 2 "Mild depression" ///
+                         3 "Moderate depression" 4 "Severe depression"
+label values kessler_categories kessler_lbl
+
+   
+   *Q7: At this point you have created three datasets: demographics, assets, and mental health. Please combine all three of these datasets to create a single dataset that you will use for data exploration and analysis. The unit of observation in this dataset should be an individual in a given survey round. (There should be at most two observations per individual, one for Wave 1 and another for Wave 2).
+   
+   *Check structure of the datasets 
+   
+   use demographics.dta, clear
+   describe hhid hhmid wave
+   list hhid hhmid wave if _n <= 10, sepby(hhid)
+  
+   
+   save demographics.dta, replace
+   
+   use assets.dta, clear
+   describe hhid wave
+
+  use "depression.dta", replace
+  
+  save depression.dta, replace
+  
+  
+  *Merge 
+  
+   use demographics.dta, clear
+
+   
+   merge m:1 hhid hhmid wave using depression.dta //   Matched                            13,842
+   
+   *Check merge results
+   
+   drop if _merge == 1
+   drop _merge
+   save merged_data.dta, replace
+   
 *-------------------------------------------------------------------------------	
-* Creation of variables
+* Part II: Exploratory Analysis
 *-------------------------------------------------------------------------------	
   
   
+   
   
   
   
-  *Generate unit variable 
-  
- 
-  
-  *Date variable 
-
-  gen date_part = substr(SubmissionDate, 1, strpos(SubmissionDate, " ") - 1)
-
- gen day = substr(date_part, 1, strpos(date_part, "/") - 1)
-
- gen month = substr(date_part, strpos(date_part, "/") + 1, strpos(substr(date_part, strpos(date_part, "/") + 1, .), "/") - 1)
-
- gen year = substr(date_part, -4, .)  
  
 
 *-------------------------------------------------------------------------------	
