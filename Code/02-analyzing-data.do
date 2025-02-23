@@ -36,6 +36,7 @@
 	*Regression OLS
 	
 	asdoc reg kessler_score total_value, robust replace save(Kessler_Regression.doc)
+	asdoc reg kessler_score total_value, robust replace save(my_regression.tex) 
 	
 	*Correlation table
 	
