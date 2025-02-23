@@ -17,17 +17,43 @@
 	cd "C:\Users\wb631166\OneDrive - WBG\Desktop\GPRL Assestment\data" // change directory 
 
 	
-	
+
+*-------------------------------------------------------------------------------	
+* Part I
+*------------------------------------------------------------------------------- 		
+   *Q1:At what level is each dataset uniquely identified (i.e., what does each row represent, and which variables are unique identifiers)? 
+    
+	*Dataset demoraphics
 	
 	*Load data set 
 	
-	use "", replace // 1,039 obs and 236 variables 
-
-*-------------------------------------------------------------------------------	
-* Cleaning process
-*------------------------------------------------------------------------------- 		
- 
- 
+	use "demographics.dta", replace // 34,427 obs and 19 variables 
+	
+	*check duplicates 
+	
+	duplicates report wave hhid hhmid // no duplicates 
+	
+	* rows with unique indentifier
+	
+	isid wave hhid hhmid
+    
+	*what ecah row represent: Each row in the dataset represents an individual (hhmid) within a household (hhid) in a specific survey wave (wave). The dataset is structured at the individual level, where each person is observed across different waves, and multiple individuals can belong to the same household.
+	
+	*Dataset assets
+	
+	*Load data set 
+	
+	use "assets.dta", replace // 164,693 obs and 9 variables 
+	
+	*check duplicates 
+	
+	duplicates report wave hhid hhmid // no duplicates 
+	
+	* rows with unique indentifier
+	
+	isid wave hhid hhmid
+	
+	
   
 *-------------------------------------------------------------------------------	
 * Creation of variables
