@@ -1,0 +1,76 @@
+*Processing Data 	
+
+
+*-------------------------------------------------------------------------------	
+* Innitial Commands 
+*------------------------------------------------------------------------------- 		
+
+
+
+   clear
+   set more off
+   set mem 800m
+
+   * Directory
+
+
+	cd "C:\Users\wb631166\OneDrive - WBG\Desktop\GPRL Assestment\data" // change directory 
+
+	
+	
+	
+	*Load data set 
+	
+	use "", replace // 1,039 obs and 236 variables 
+
+*-------------------------------------------------------------------------------	
+* Cleaning process
+*------------------------------------------------------------------------------- 		
+ 
+ 
+  
+*-------------------------------------------------------------------------------	
+* Creation of variables
+*-------------------------------------------------------------------------------	
+  
+  
+  
+  
+  
+  *Generate unit variable 
+  
+ 
+  
+  *Date variable 
+
+  gen date_part = substr(SubmissionDate, 1, strpos(SubmissionDate, " ") - 1)
+
+ gen day = substr(date_part, 1, strpos(date_part, "/") - 1)
+
+ gen month = substr(date_part, strpos(date_part, "/") + 1, strpos(substr(date_part, strpos(date_part, "/") + 1, .), "/") - 1)
+
+ gen year = substr(date_part, -4, .)  
+ 
+
+*-------------------------------------------------------------------------------	
+* Select varaibles
+*-------------------------------------------------------------------------------  
+
+
+   
+   
+ *-------------------------------------------------------------------------------	
+* Order Data set
+*-------------------------------------------------------------------------------	
+   
+   order day month year id_entrevista municipality age gender income
+  
+
+*-------------------------------------------------------------------------------	
+* Save data set
+*-------------------------------------------------------------------------------	
+   
+   save "", replace
+   
+   
+   
