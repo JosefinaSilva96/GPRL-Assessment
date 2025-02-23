@@ -74,6 +74,20 @@
 	
 	
 	
+	 *Q2:Import the demographics dataset and calculate a proxy variable for household size based on the number of members surveyed in each household in Wave 1. Assume the household size for Wave 2 remains the same.
+	 
+	 *Load data set 
+	
+	use "demographics.dta", replace // 34,427 obs and 19 variables 
+	 
+    gen hh_size = .
+	
+    bysort hhid (wave): replace hh_size = _N if wave == 1
+	
+	*Q3: To calculate the monetary value of all assets, you should use the `currentvalue' variable, which reports the monetary value of a single unit of the asset. However, you will notice that this variable is often missing. Please use the median of "currentvalue" for each type of asset (by type we mean, for example, "chickens", "Cutlass", "Room Furniture", "Radio", "Cell (mobile) Phone handset", etc.) to impute the missing values.
+	
+	
+	
   
 *-------------------------------------------------------------------------------	
 * Creation of variables
