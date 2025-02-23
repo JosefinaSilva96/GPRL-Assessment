@@ -86,8 +86,28 @@
 	
 	*Q3: To calculate the monetary value of all assets, you should use the `currentvalue' variable, which reports the monetary value of a single unit of the asset. However, you will notice that this variable is often missing. Please use the median of "currentvalue" for each type of asset (by type we mean, for example, "chickens", "Cutlass", "Room Furniture", "Radio", "Cell (mobile) Phone handset", etc.) to impute the missing values.
 	
+	*Load data set 
 	
+	use "assets.dta", replace // 164,693 obs and 9 variables 
 	
+	*Check missing values 
+	
+	sum currentvalue, detail
+	
+   count if missing(currentvalue) //  90,811 missing values 
+   
+   *Create a single variable that consolidates all asset names
+   
+   gen currentvalue_imputed = currentvalue
+   
+   egen median_value = median(currentvalue), by(animaltype toolcode durablegood_code)
+   
+   
+   *Q4: Create a variable that contains the total monetary value for each observation, by multiplying quantity and the imputed current value.
+   
+   gen total_value = quantity * currentvalue_imputed
+   
+   sum total_value
   
 *-------------------------------------------------------------------------------	
 * Creation of variables
